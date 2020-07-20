@@ -1,0 +1,284 @@
+// Author:Liujizhou
+// Student ID:z5222381
+// Platform: (select one of Windows, Unix, Mac)windows
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+// all the basic data structures and functions are included in this template
+// you can add your own auxiliary functions as you like
+
+// data structures representing DLList
+
+// data type for nodes
+typedef struct DLListNode {
+    int  value;  // value (int) of this list item
+    struct DLListNode *prev;
+    // pointer previous node in list
+    struct DLListNode *next;
+    // pointer to next node in list
+} DLListNode;
+
+//data type for doubly linked lists
+typedef struct DLList{
+    int  size;      // count of items in list
+    DLListNode *first; // first node in list
+    DLListNode *last;  // last node in list
+} DLList;
+
+// create a new DLListNode
+DLListNode *newDLListNode(int it)
+{
+    DLListNode *new;
+    new = malloc(sizeof(DLListNode));
+    assert(new != NULL);
+    new->value = it;
+    new->prev = new->next = NULL;
+    return new;
+}
+
+// create a new empty DLList
+DLList *newDLList()
+{
+    DLList *L;
+    L = malloc(sizeof (struct DLList));
+    assert (L != NULL);
+    L->size = 0;
+    L->first = NULL;
+    L->last = NULL;
+    return L;
+}
+
+
+// create a DLList from a text file
+// CreateDLListFromFileDlist(), takes O(n) time.
+DLList *CreateDLListFromFileDlist(const char *filename)
+{
+    FILE *fp;
+    DLList *L;
+    L = newDLList();
+    DLListNode *head;
+    DLListNode *plast;
+    plast= L->last;
+    int da;
+    int size = 1024;
+    char* buff = (char*)malloc(size);
+    if ("stdin" == filename) {
+        while ((NULL != fgets(buff, size, stdin)) && (buff[0] != '\n')) {
+            if (strncmp(buff,"end",3)==0) {
+                break;
+            }
+            da = atoi(buff);
+            if (L->size == 0) {
+                head = newDLListNode(da);
+                head->prev = NULL;
+                L->first = plast = head;
+                L->size++;
+            } else {
+                head = newDLListNode(da);
+                plast->next = head;
+                head->prev = plast;
+                plast = plast->next;
+                head->next = NULL;
+            }
+        }
+        return L;
+    }else{
+        fp=fopen(filename,"r");
+        if (fp == NULL){
+            puts("Invalid input!");
+        }
+        struct DLList *L = newDLList();
+        while (fscanf(fp, "%d", &da) != EOF){
+            head = newDLListNode(da);
+            DLListNode *plast;
+            plast= L->last;
+            if (plast == NULL){
+                head->prev = NULL;
+                L->last = head;
+                L->first = head;
+            }else{
+                head->prev=plast;
+                plast->next=head;
+                L->last=L->last->next;
+            }
+        }
+        fclose(fp);
+        return L;
+    }
+}
+#pragma clang diagnostic pop
+
+// clone a DLList
+// cloneList(), takes O(n) time.
+DLList *cloneList(DLList *u)
+{
+    struct DLList *N=newDLList();
+    if (u == NULL){
+        N = u;
+        return N;
+    }else {
+        DLListNode *p = u->first;
+        while(p != NULL){
+            DLList *new=newDLList();
+            DLListNode *head,*prev,*plast;
+            plast=N->last;
+            head = newDLListNode(p->value);
+            if (plast == NULL){
+                head->prev = NULL;
+                N->last = head;
+                N->first = head;
+            }else{
+                head->prev=plast;
+                plast->next=head;
+                N->last=N->last->next;
+            }
+            p=p->next;
+        }
+        return N;
+    }
+}
+
+
+// compute the union of two DLLists u and v
+DLList *setUnion(DLList *u, DLList *v)
+{
+    DLList *U= cloneList(u);
+    DLList *V= cloneList(v);
+    DLListNode *ku = U->last;
+    DLListNode *kv = V->first;
+    ku->next=kv;
+    kv->prev=ku;
+    U->size=U->size + V->size;
+    DLListNode *p,*q,*r;
+    p=U->first;
+    while(p != NULL && p->next != NULL){
+        q=p;
+        while (q->next != NULL){
+            if(q->next->value==p->value){
+                r=q->next;
+                q->next=r->next;
+                free(r);
+            }
+            else{
+                q=q->next;
+            }
+        }
+        p=p->next;
+    }
+    return U;
+}
+
+// compute the insection of two DLLists u and v
+// intersection(), takes O(n^2) time.
+DLList *setIntersection(DLList *u, DLList *v)
+{
+    DLList *U= cloneList(u);
+    DLList *V= cloneList(v);
+    DLListNode *ku = U->last;
+    DLListNode *kv = V->first;
+    ku->next=kv;
+    kv->prev=ku;
+    U->size=U->size + V->size;
+    DLList *IN=newDLList();
+    DLListNode *p,*q;
+    p=U->first;
+    while(p != NULL && p->next != NULL){
+        q = p;
+        while (q->next != NULL){
+            if(q->next->value == p->value){
+                DLListNode *NEW=newDLListNode(p->value);
+                DLListNode *INL=IN->last;
+                if (INL == NULL){
+                    IN->first=NEW;
+                    IN->last=NEW;
+                }
+                else{
+                    NEW->prev=INL;
+                    INL->next=NEW;
+                    IN->last=IN->last->next;
+                }
+                q->next=q->next->next;
+            }
+            else{
+                q=q->next;
+            }
+        }
+        p=p->next;
+    }
+    return IN;
+}
+
+// free up all space associated with list
+// freeDLList(), takes O(n) time.
+void freeDLList(DLList *L)
+{
+    assert(L != NULL);
+    struct DLListNode *p = L->first;
+    struct DLListNode *temp;
+    while (p != NULL){
+        temp=p;
+        p=p->next;
+        free(temp);
+    }
+    free(L);
+}
+
+// display items of a DLList
+// printDDList(), takes O(n) time.
+void printDLList(DLList *u)
+{
+    if (u!= NULL) {
+        DLListNode* p = u->first;
+        while(p->next != NULL){
+            printf("%d ", p->value);
+            p = p->next;
+        }
+        printf("%d \n", p->value);
+    }
+    else{
+        printf("The DLList is empty.\n");
+    }
+}
+
+int main()
+{
+    DLList *list1, *list2, *list3, *list4;
+
+    list1=CreateDLListFromFileDlist("File1.txt");
+    printDLList(list1);
+
+    list2=CreateDLListFromFileDlist("File2.txt");
+    printDLList(list2);
+
+    list3=setUnion(list1, list2);
+    printDLList(list3);
+
+    list4=setIntersection(list1, list2);
+    printDLList(list4);
+
+    freeDLList(list1);
+    freeDLList(list2);
+    freeDLList(list3);
+    freeDLList(list4);
+
+    printf("please type all the integers of list1\n");
+    list1=CreateDLListFromFileDlist("stdin");
+
+    printf("please type all the integers of list2\n");
+    list2=CreateDLListFromFileDlist("stdin");
+
+    list3=cloneList(list1);
+    printDLList(list3);
+    list4=cloneList(list2);
+    printDLList(list4);
+
+    freeDLList(list1);
+    freeDLList(list2);
+    freeDLList(list3);
+    freeDLList(list4);
+
+    return 0;
+}
