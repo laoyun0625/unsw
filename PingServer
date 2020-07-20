@@ -1,0 +1,105 @@
+import sys
+from threading import Thread
+import socket
+import time
+import threading
+
+class UDPClient:
+    def __init__(self, address):
+        self.address = address
+        
+    def send_udp_message(self, data):
+        udp_sender = socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_sender.settimeout(1)
+        udp_sender.sendto(data, self.address)
+        udp_sender.close()
+    
+    def send(self,data):
+            thread_send = threading.Thread(target=self.send_udp_message, args=(data,))
+            thread_send.daemon = True
+            thread_send.start()
+        
+    def receive_udp_message(self, data):
+        udp_receiver = socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_receiver.settimeout(1)
+        while(True):
+            message,ip_add=udp_receiver.recvfrom(1024000000)
+            print()
+
+    
+    def receive(self,data):
+            thread_recv = threading.Thread(target=self.receive_udp_message, args=(data,))
+            thread_recv.daemon = True
+            thread_recv.start()   
+
+        
+    
+
+class P2PPeer:
+    def __init__(self, peer_id):
+        self.base_post = 12000
+        self.peer_id = int(peer_id)
+        self.transfer_port = self.base_post + self.peer_id
+        self.ip = 'localhost'
+        self.transfer_address = (self.ip, self.transfer_port)
+        
+        
+        
+class P2PHost:
+    def __init__(self):
+        self.current_peer = None
+        self.first_successor = None
+        self.second_successor = None
+        self.first_predecessor = None
+        self.second_predecessor = None
+        self.ping_interval = None
+        
+    def host_init(self, id, first_id, second_id, ping_interval):
+        self.current_peer = P2PPeer(id)
+        self.first_successor = P2PPeer(first_id)
+        self.second_successor = P2PPeer(second_id)
+        self.ping_interval = int(ping_interval)
+        print(f"Start peer {peer_id} at port {self.current_peer.transfer_port}")
+        print(f"Peer {peer_id} can find first successor on port {self.first_successor.transfer_port} and second successor on port {self.second_successor.transfer_port}.")
+        
+
+    def ping_successors(self):
+        while(True):
+            first_udp_client = UDPClient(self.first_successor.transfer_address)
+            data = None
+            first_udp_client.send(data)
+            second_udp_client = UDPClient(self.second_successor.transfer_address)
+            data = None
+            second_udp_client.send(data)
+            time.sleep(self.ping_interval)
+            
+    def ping_receiver(self):
+        udp_client = UDPClient(self.current_peer.transfer_address)
+        udp_client.receive()
+        
+        
+        
+        
+        
+if __name__ == '__main__':
+    action_type = sys.argv[1]
+    if action_type == 'init':
+        peer_id = sys.argv[2]
+        first_successor_id = sys.argv[3]
+        second_successor_id = sys.argv[4]
+        ping_interval = sys.argv[5]
+        host = P2PHost()
+        host.host_init(peer_id, first_successor_id, second_successor_id, ping_interval)
+
+        host.ping_receive()
+
+        host.ping_successors()
+
+        #host.ping_successors_thread()
+        # check input
+        #host.check_input()
+
+    elif action_type == 'init':
+        peer_id = sys.argv[2]
+        known_peer_id = sys.argv[3]
+        ping_interval = sys.argv[4]
