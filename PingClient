@@ -1,0 +1,33 @@
+from socket import *
+import sys
+import time
+
+if len(sys.argv) != 3:
+    print("Missing Arguments")
+    print("Usage: PingClient.py hostname port")
+    sys.exit()
+
+HOST = sys.argv[1]
+PORT = int(sys.argv[2])
+BUFSIZE = 1024
+ADDR = (HOST, PORT)
+
+udpCliSock = socket(AF_INET, SOCK_DGRAM)
+udpCliSock.settimeout(1)
+
+ping = 0
+while ping < 10:
+    sendTime = time.time()
+    message = ('Ping %d %s' % (ping + 1, sendTime)).encode()
+    try:
+        udpCliSock.sendto(message, ADDR)
+        data, server = udpCliSock.recvfrom(BUFSIZE)
+        receivedTime = time.time()
+        rtt = receivedTime - sendTime
+        print("ping to " + HOST + ", RECEIVED " + str(data) + ", rtt = " + str(rtt) + "ms.")
+    except Exception as e:
+        print("ping to " + HOST + ", NULL RESPONSE, seq = " + str(ping) + ", " + str(
+            time.strftime("%H:%M:%S")) + " AEST, rtt = TIMEOUT.")
+    ping = ping + 1
+
+udpCliSock.close()
