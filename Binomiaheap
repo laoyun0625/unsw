@@ -1,0 +1,380 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+
+// data type for heap nodes
+typedef struct HeapNode {
+    // each node stores the priority (key), name, execution time,
+    //  release time and deadline of one task
+    int key; //key of this task
+    int TaskName;  //task name
+    int Etime; //execution time of this task
+    int Rtime; // release time of this task
+    int Dline; // deadline of this task
+    struct HeapNode *parent;
+    struct HeapNode *sibling;
+    struct HeapNode *child;
+    struct HeapNode *left; //pointer to left child
+    struct HeapNode *right; //pointer to right child
+    int size; // number of nodes
+} HeapNode;
+
+//data type for a priority queue (heap)
+typedef struct BinomialHeap { //this is heap header
+    int size;      // count of items in the heap
+    HeapNode *head; // add additional fields here
+    HeapNode *LastNode; // last node pointer
+    HeapNode *root; // pointer to the root of heap
+    struct BinomialHeap *next;
+} BinomialHeap;
+
+
+// create a new heap node to store an item (task)
+HeapNode *newHeapNode(int k, int n, int c, int r, int d) {
+    HeapNode *new;
+    new = malloc(sizeof(HeapNode));
+    if (new == NULL) {
+        exit(-1);
+    }
+    new->key = k;
+    new->TaskName = n;
+    new->Etime = c;
+    new->Rtime = r;
+    new->Dline = d;
+    new->parent = NULL;
+    new->sibling = NULL;
+    new->child = NULL;
+    new->left = NULL; // left child
+    new->right = NULL; // righ child
+    return new;
+}
+
+
+BinomialHeap *newHeap() {
+    BinomialHeap *new;
+    new = malloc(sizeof(BinomialHeap));
+    assert(new != NULL);
+    new->size = 0;
+    new->next = NULL;
+    new->head = NULL;
+    new->LastNode = NULL;
+    new->root = NULL;
+    return new;
+}
+
+
+void binomialLink(HeapNode *y, HeapNode *z) {
+    y->parent = z;
+    y->sibling = z->child;
+    z->child = y;
+    z->size = z->size + 1;
+}
+
+
+HeapNode *mergeTwoHeaps(BinomialHeap *h1, BinomialHeap *h2) {
+    HeapNode *firstNode = NULL;
+    HeapNode *p = NULL;
+    HeapNode *p1 = h1->head;
+    HeapNode *p2 = h2->head;
+    if (p1 == NULL || p2 == NULL) {
+        if (p1 == NULL) {
+            firstNode = p2;
+        } else {
+            firstNode = p1;
+        }
+        return firstNode;
+    }
+
+    if (p1->size < p2->size) {
+        firstNode = p1;
+        p = firstNode;
+        p1 = p1->sibling;
+    } else {
+        firstNode = p2;
+        p = firstNode;
+        p2 = p2->sibling;
+    }
+    while (p1 != NULL && p2 != NULL) {
+        if (p1->size < p2->size) {
+            p->sibling = p1;
+            p = p1;
+            p1 = p1->sibling;
+        } else {
+            p->sibling = p2;
+            p = p2;
+            p2 = p2->sibling;
+        }
+    }
+    if (p1 != NULL) {
+        p->sibling = p1;
+    } else {
+        p->sibling = p2;
+    }
+    return firstNode;
+}
+
+
+// O(n)
+struct BinomialHeap *HeapUnion(BinomialHeap *h1, BinomialHeap *h2) {
+    BinomialHeap *H = newHeap();
+    H->head = mergeTwoHeaps(h1, h2);
+    if (NULL == H->head)
+        return H;
+    struct HeapNode *x = H->head;
+    struct HeapNode *prev_x = NULL;
+    struct HeapNode *next_x = x->sibling;
+    while (next_x != NULL) {
+        if ((x->size != next_x->size)
+            || (next_x->sibling != NULL && next_x->sibling->size == x->size)) {
+            prev_x = x;
+            x = next_x;
+        } else if (x->key <= next_x->key) {
+            x->sibling = next_x->sibling;
+            binomialLink(next_x, x);
+        } else {
+            if (prev_x == NULL) {
+                H->head = next_x;
+            } else {
+                prev_x->sibling = next_x;
+            }
+            binomialLink(x, next_x);
+            x = next_x;
+        }
+        next_x = x->sibling;
+    }
+    return H;
+}
+
+
+void swap(HeapNode *a, HeapNode *b) {
+    int tmp;
+    tmp = a->TaskName;
+    a->TaskName = b->TaskName;
+    b->TaskName = tmp;
+
+    tmp = a->Etime;
+    a->Etime = b->Etime;
+    b->Etime = tmp;
+
+    tmp = a->Rtime;
+    a->Rtime = b->Rtime;
+    b->Rtime = tmp;
+
+    tmp = a->Dline;
+    a->Dline = b->Dline;
+    b->Dline = tmp;
+
+    tmp = a->key;
+    a->key = b->key;
+    b->key = tmp;
+}
+
+
+// O(log(n))
+void Insert(BinomialHeap *T, int k, int n, int c, int r, int d) {
+    {
+        HeapNode *h = newHeapNode(k, n, c, r, d);
+        HeapNode *p;
+        if (T->size == 0) {
+            T->root = T->LastNode = h;
+            T->size = 1;
+            return;
+        }
+        p = T->LastNode;
+        if (p->parent && p == p->parent->left) {
+            p->parent->right = h;
+            h->parent = p->parent;
+            T->LastNode = h;
+        } else {
+            while (p->parent && p == p->parent->right) {
+                p = p->parent;
+            }
+            if (p->parent) {
+                p = p->parent->right;
+            }
+            while (p && p->left) p = p->left;
+            p->left = h;
+            h->parent = p;
+            T->LastNode = h;
+        }
+        while (h->parent && h->key < h->parent->key) {
+            swap(h, h->parent);
+            h = h->parent;
+        }
+        T->size = T->size + 1;
+    }
+}
+
+
+void Bio_min(BinomialHeap *heap, HeapNode **prev_y, HeapNode **y) {
+    HeapNode *x, *prev_x;
+    if (heap == NULL) {
+        return;
+    }
+    prev_x = heap;
+    x = heap->next;
+    *prev_y = NULL;
+    *y = (HeapNode *) heap;
+    while (x != NULL) {
+        if (x->key < (*y)->key) {
+            *y = x;
+            *prev_y = prev_x;
+        }
+        prev_x = x;
+        x = x->sibling;
+    }
+}
+
+// O(n)
+int Min(BinomialHeap *T) {
+    HeapNode *prev_y, *y;
+    Bio_min(T, &prev_y, &y);
+    return y->key;
+}
+
+
+// O(log(n))
+HeapNode *RemoveMin(BinomialHeap *T) {
+    HeapNode *root, *p, *q;
+    if (T->size == 1) {
+        root = T->root;
+        T->size = 0;
+        T->root = T->LastNode = 0;
+        return root;
+    }
+    q = T->LastNode;
+    p = T->root;
+    swap(p, q);
+    root = T->LastNode;
+    while (q->parent != NULL && q == q->parent->left) {
+        q = q->parent;
+    }
+    if (q->parent) {
+        q = q->parent->left;
+    }
+    while (q != NULL && q->right) q = q->right;
+    T->LastNode = q;
+    if (root == root->parent->left) {
+        root->parent->left = 0;
+    } else {
+        root->parent->right = 0;
+    }
+    T->size--;
+    while (p->left != NULL || p->right != NULL) {
+        if (p->left != NULL && p->right != NULL && p->key > p->left->key && p->key > p->right->key) {
+            if (p->left->key < p->right->key) {
+                swap(p, p->left);
+                p = p->left;
+            } else {
+                swap(p, p->right);
+                p = p->right;
+            }
+        } else if (p->left != NULL && p->key > p->left->key) {
+            swap(p, p->left);
+            p = p->left;
+        } else if (p->right != NULL && p->key > p->right->key) {
+            swap(p, p->right);
+            p = p->right;
+        } else {
+            break;
+        }
+    }
+    return root;
+}
+
+struct RealeseTime {
+    int taskName;
+    int core;
+    int startTime;
+};
+
+
+//  O(mnlogn)
+int TaskScheduler(char *f1, char *f2, int m) {
+    BinomialHeap *heap = newHeap();
+    int *start = (int *) malloc(sizeof(int) * m);
+    FILE *fp1 = fopen(f1, "r");
+    if (fp1 == NULL) {
+        printf("file1 does not exist\n");
+        return 0;
+    }
+    int taskname, cTime, rTime, dTime;
+    while (fscanf(fp1, "%d %d %d %d", &taskname, &cTime, &rTime, &dTime) != EOF) {
+        if (cTime < 0 || rTime < 0 || dTime < 0) {
+            printf("input error when reading the attribute of the task %d\n", taskname);
+            fclose(fp1);
+            while (heap->size > 0) {
+                free(RemoveMin(heap));
+            }
+            free(start);
+            free(heap);
+            return 0;
+        }
+        Insert(heap, taskname, rTime, cTime, rTime, dTime);
+    }
+    fclose(fp1);
+
+    int n = heap->size;
+    struct RealeseTime *all = (struct RealeseTime *) malloc(sizeof(struct RealeseTime) * n);
+    for (int i = 0; i < m; i++) { start[i] = 0; }
+    int j = 0;
+    while (heap->size > 0) {
+        HeapNode *h = RemoveMin(heap);
+        int minindex = -999, mintime = 9999999;
+        for (int i = 0; i < m; ++i) {
+            if (mintime > start[i]) mintime = start[i], minindex = i;
+        }
+        if (mintime < h->Rtime) mintime = h->Rtime;
+        start[minindex] = mintime + h->Etime;
+        if (mintime + h->Etime > h->Dline) {
+            free(h);
+            while (heap->size > 0) {
+                free(RemoveMin(heap));
+                free(all);
+                free(start);
+                free(heap);
+                return 0;
+                break;
+            }
+        }
+        all[j].taskName = h->TaskName;
+        all[j].core = minindex + 1;
+        all[j].startTime = mintime;
+        j++;
+        free(h);
+    }
+    FILE *fp2 = fopen(f2, "w");
+    for (int i = 0; i < n; i++) {
+        fprintf(fp2, "%d Core%d %d ", all[i].taskName, all[i].core, all[i].startTime);
+    }
+    fclose(fp2);
+    free(all);
+    free(start);
+    free(heap);
+    return 1;
+}
+
+
+int main() //sample main for testing
+{
+    int i;
+    i = TaskScheduler("samplefile1.txt", "feasibleschedule1.txt", 4);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is a feasible schedule on 4 cores */
+    i = TaskScheduler("samplefile1.txt", "feasibleschedule2.txt", 3);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is no feasible schedule on 3 cores */
+    i = TaskScheduler("samplefile2.txt", "feasibleschedule3.txt", 5);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is a feasible schedule on 5 cores */
+    i = TaskScheduler("samplefile2.txt", "feasibleschedule4.txt", 4);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is no feasible schedule on 4 cores */
+    i = TaskScheduler("samplefile3.txt", "feasibleschedule5.txt", 2);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is no feasible schedule on 2 cores */
+    i = TaskScheduler("samplefile4.txt", "feasibleschedule6.txt", 2);
+    if (i == 0) printf("No feasible schedule!\n");
+    /* There is a feasible schedule on 2 cores */
+    return 0;
+}
